@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My To-Do List App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #4a5568;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .input-section {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #taskInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #taskInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #addBtn {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        #addBtn:hover {
+            background: #5a6fd8;
+        }
+
+        .tasks-section {
+            padding: 0 20px 20px;
+        }
+
+        #taskList {
+            list-style: none;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f7fafc;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .task-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item.completed {
+            opacity: 0.7;
+            border-left-color: #48bb78;
+        }
+
+        .task-text {
+            flex: 1;
+            margin: 0 15px;
+            font-size: 16px;
+        }
+
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: #718096;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .complete-btn, .delete-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .complete-btn {
+            background: #48bb78;
+            color: white;
+        }
+
+        .complete-btn:hover {
+            background: #38a169;
+        }
+
+        .delete-btn {
+            background: #f56565;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #e53e3e;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+        }
+
+        .empty-state.hidden {
+            display: none;
+        }
+
+        .stats {
+            padding: 15px 20px;
+            background: #edf2f7;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 My To-Do List</h1>
+            <p>Stay organized and productive</p>
+        </div>
+
+        <div class="input-section">
+            <input type="text" id="taskInput" placeholder="Enter a new task..." maxlength="100">
+            <button id="addBtn">Add Task</button>
+        </div>
+
+        <div class="tasks-section">
+            <div id="emptyState" class="empty-state">
+                <p>🎉 No tasks yet! Add one above to get started.</p>
+            </div>
+            <ul id="taskList"></ul>
+        </div>
+
+        <div class="stats">
+            <span id="totalTasks">Total: 0 tasks</span>
+            <span id="completedTasks">Completed: 0</span>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const taskInput = document.getElementById('taskInput');
+        const addBtn = document.getElementById('addBtn');
+        const taskList = document.getElementById('taskList');
+        const emptyState = document.getElementById('emptyState');
+        const totalTasksSpan = document.getElementById('totalTasks');
+        const completedTasksSpan = document.getElementById('completedTasks');
+
+        // Load tasks from localStorage or initialize empty array
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        // Function to update statistics
+        function updateStats() {
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.completed).length;
+            
+            totalTasksSpan.textContent = `Total: ${totalTasks} task${totalTasks !== 1 ? 's' : ''}`;
+            completedTasksSpan.textContent = `Completed: ${completedTasks}`;
+        }
+
+        // Function to save tasks to localStorage
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            updateStats();
+        }
+
+        // Function to create a task element
+        function createTaskElement(task, index) {
+            const li = document.createElement('li');
+            li.className = `task-item ${task.completed ? 'completed' : ''}`;
+            
+            li.innerHTML = `
+                <span class="task-text">${task.text}</span>
+                <div class="task-actions">
+                    <button class="complete-btn">${task.completed ? 'Undo' : 'Complete'}</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            `;
+
+            // Add event listeners to buttons
+            const completeBtn = li.querySelector('.complete-btn');
+            const deleteBtn = li.querySelector('.delete-btn');
+
+            completeBtn.addEventListener('click', () => {
+                tasks[index].completed = !tasks[index].completed;
+                saveTasks();
+                renderTasks();
+            });
+
+            deleteBtn.addEventListener('click', () => {
+                tasks.splice(index, 1);
+                saveTasks();
+                renderTasks();
+            });
+
+            return li;
+        }
+
+        // Function to render all tasks
+        function renderTasks() {
+            taskList.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                tasks.forEach((task, index) => {
+                    const taskElement = createTaskElement(task, index);
+                    taskList.appendChild(taskElement);
+                });
+            }
+        }
+
+        // Function to add a new task
+        function addTask() {
+            const text = taskInput.value.trim();
+            
+            if (text === '') {
+                alert('Please enter a task!');
+                return;
+            }
+
+            const newTask = {
+                text: text,
+                completed: false,
+                id: Date.now() // Simple unique ID
+            };
+
+            tasks.push(newTask);
+            taskInput.value = '';
+            saveTasks();
+            renderTasks();
+        }
+
+        // Event listeners
+        addBtn.addEventListener('click', addTask);
+        
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+
+        // Initialize the app
+        renderTasks();
+        updateStats();
+    </script>
+</body>
+</html>
